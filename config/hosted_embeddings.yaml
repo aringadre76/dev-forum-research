@@ -2,10 +2,9 @@ name: DevForum Research
 storage_path: data/devforum.sqlite
 known_tools_path: data/known_tools.yaml
 embedding:
-  mode: local
+  mode: hosted
   model: text-embedding-3-small
   base_url: https://api.openai.com/v1
-  dimensions: 128
 sources:
   - type: fixture
     name: synthetic-devtools-pain

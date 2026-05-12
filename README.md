@@ -22,6 +22,7 @@ GitHub Issues and RSS or Atom feeds are available as source connectors.
 - `Document` is the unified schema for GitHub Issues, RSS entries, and fixtures.
 - `SQLiteStore` persists documents, source cursors, and local vectors.
 - `HashingEmbeddingModel` provides deterministic local embeddings for MVP use.
+- `HostedEmbeddingModel` provides optional OpenAI-compatible embeddings behind config or CLI flags.
 - `LocalVectorIndex` combines vector similarity with a small keyword overlap boost.
 - `ResearchOrchestrator` runs ingest, index, theme discovery, gap scoring, evidence compilation, optional LLM idea generation, and artifact writing.
 - `LLMClient` is the provider abstraction. The included implementation is OpenAI-compatible.
@@ -45,8 +46,8 @@ cp .env.example .env
 Environment variables:
 
 - `GITHUB_TOKEN`: Optional for GitHub API ingestion, recommended for rate limits.
-- `OPENAI_API_KEY`: Enables IdeaBrief generation when not using dry-run mode.
-- `OPENAI_BASE_URL`: Optional OpenAI-compatible endpoint.
+- `OPENAI_API_KEY`: Enables IdeaBrief generation and hosted embedding mode.
+- `OPENAI_BASE_URL`: Optional OpenAI-compatible chat endpoint.
 - `OPENAI_MODEL`: Optional model name, defaults to `gpt-4o-mini`.
 
 ## Commands
@@ -81,6 +82,12 @@ Run directly:
 python3 -m devforum_research.cli run --config config/example.yaml --dry-run
 ```
 
+Force local or hosted embeddings from the CLI:
+
+```bash
+python3 -m devforum_research.cli run --config config/example.yaml --dry-run --embedding-mode local
+```
+
 View the latest Markdown report:
 
 ```bash
@@ -93,6 +100,12 @@ Enable LLM IdeaBrief generation:
 OPENAI_API_KEY=your_key python3 -m devforum_research.cli run --config config/example.yaml
 ```
 
+Use hosted embeddings with an OpenAI-compatible embeddings endpoint:
+
+```bash
+OPENAI_API_KEY=your_key python3 -m devforum_research.cli run --config config/hosted_embeddings.yaml --dry-run
+```
+
 ## Source configuration
 
 Edit `config/example.yaml` or create another YAML file:
@@ -101,6 +114,11 @@ Edit `config/example.yaml` or create another YAML file:
 name: DevForum Research
 storage_path: data/devforum.sqlite
 known_tools_path: data/known_tools.yaml
+embedding:
+  mode: local
+  model: text-embedding-3-small
+  base_url: https://api.openai.com/v1
+  dimensions: 128
 sources:
   - type: github
     repo: owner/repo
@@ -121,6 +139,17 @@ research:
 
 `as_of` is optional. It is set in the example config so fixture dry-runs stay date-stable.
 
+## Embedding modes
+
+The default `local` mode uses deterministic hashed embeddings stored in SQLite. It is free, fast, and
+works without API keys, but semantic recall is limited.
+
+The `hosted` mode calls an OpenAI-compatible `/embeddings` endpoint using `OPENAI_API_KEY` and the
+configured `embedding.model` and `embedding.base_url`. Hosted embeddings can improve semantic retrieval,
+but each run may send document text and query text to the provider. Expect extra latency and provider
+costs proportional to the number and size of indexed documents. Review provider data-retention terms
+before using hosted mode on sensitive corpora.
+
 ## Outputs
 
 Each run writes artifacts to `runs/<timestamp>/`:
@@ -128,7 +157,7 @@ Each run writes artifacts to `runs/<timestamp>/`:
 - `logs.jsonl`: Structured stage logs.
 - `documents.json`: Normalized documents used in the run.
 - `themes.json`: Theme and gap scoring details.
-- `report.json`: Validated report object.
+- `report.json`: Validated report object, including `indexed_corpus_urls` used for citation checks.
 - `report.md`: Markdown export.
 
 A checked-in sample report is available at `examples/sample_report.md`.
@@ -157,6 +186,7 @@ themes plus evidence excerpts. When LLM mode is enabled:
 - Responses are parsed into the required `IdeaBrief` schema with Pydantic.
 - JSON parse or schema failure is retried once.
 - Every evidence URL must match an ingested document URL.
+- `report.json` records `indexed_corpus_urls` so each run can audit what URLs were valid citation sources.
 - The model is instructed not to invent URLs.
 
 ## Tests
@@ -168,6 +198,8 @@ The test suite covers:
 - IdeaBrief schema validation.
 - Citation enforcement.
 - Local vector retrieval.
+- Hosted embedding HTTP behavior with mocked requests.
+- Run artifact logging for embedded, retrieved, and generated counts.
 - Golden-style clustering and gap scoring on synthetic data.
 
 ## Extension points
@@ -185,6 +217,7 @@ To add a new source:
 - GitHub Discussions are not implemented yet, though the schema allows a future `github_discussion` source type.
 - Stack Exchange tags are not implemented in this MVP.
 - The local embedding model is deterministic and cheap, but not deeply semantic.
+- Hosted embedding mode can improve retrieval quality, but adds network latency, provider costs, and data-sharing considerations.
 - RSS sources often lack thread metadata, reply counts, or resolution state.
 - The fixture report is synthetic and intended for pipeline verification.
 - Novelty detection is heuristic and should be paired with interviews and landing-page validation.
