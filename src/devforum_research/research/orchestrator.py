@@ -19,6 +19,7 @@ from devforum_research.connectors.base import SourceConnector, SourceState
 from devforum_research.connectors.fixtures import FixtureConnector
 from devforum_research.connectors.github import GitHubConnector
 from devforum_research.connectors.rss import RSSConnector
+from devforum_research.index.embeddings import build_embedding_model
 from devforum_research.index.store import LocalVectorIndex
 from devforum_research.llm.client import LLMClient, build_llm_client
 from devforum_research.models import (
@@ -260,7 +261,7 @@ class ResearchOrchestrator:
         self.config = config
         self.config_path = config_path
         self.store = store
-        self.index = LocalVectorIndex(store)
+        self.index = LocalVectorIndex(store, build_embedding_model(config.embedding))
         self.llm_client = llm_client if llm_client is not None else build_llm_client()
 
     def run(self, dry_run: bool = False) -> RunArtifacts:
@@ -293,7 +294,14 @@ class ResearchOrchestrator:
 
         documents = self.store.list_documents(since=since)
         logger.log("index", "indexing documents", document_count=len(documents))
-        self.index.index_documents(documents)
+        embedded_count = self.index.index_documents(documents)
+        logger.log(
+            "index",
+            "embedded documents",
+            embedding_mode=self.index.embedding_model.mode,
+            embedding_model=self.index.embedding_model.model_name,
+            embedded_count=embedded_count,
+        )
 
         logger.log("theme_discovery", "discovering themes")
         themes = discover_themes(
@@ -312,13 +320,22 @@ class ResearchOrchestrator:
             index=self.index,
             evidence_per_theme=self.config.research.evidence_per_theme,
         )
+        logger.log(
+            "evidence_compilation",
+            "retrieved supporting evidence",
+            retrieved_count=sum(len(theme.evidence) for theme in themes),
+        )
 
         known_tools = load_known_tools(Path(self.config.known_tools_path))
         allowed_urls = {document.url for document in documents}
         ideas = []
         is_dry_run = dry_run or self.llm_client is None
         if is_dry_run:
-            logger.log("idea_generation", "dry run active, skipping LLM idea generation")
+            logger.log(
+                "idea_generation",
+                "dry run active, skipping LLM idea generation",
+                generated_count=0,
+            )
         else:
             logger.log("idea_generation", "generating ideas with LLM")
             ideas = self.llm_client.generate_ideas(
@@ -327,6 +344,7 @@ class ResearchOrchestrator:
                 allowed_urls=allowed_urls,
             )
             validate_citations(ideas, allowed_urls)
+            logger.log("idea_generation", "generated idea briefs", generated_count=len(ideas))
 
         report = ResearchReport(
             run_id=run_id,
@@ -334,6 +352,7 @@ class ResearchOrchestrator:
             dry_run=is_dry_run,
             config_path=str(self.config_path),
             document_count=len(documents),
+            indexed_corpus_urls=sorted(allowed_urls),
             themes=themes,
             ideas=ideas,
             known_tools_considered=[tool.name for tool in known_tools],

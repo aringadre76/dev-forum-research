@@ -124,6 +124,7 @@ class ResearchReport(BaseModel):
     dry_run: bool
     config_path: str
     document_count: int
+    indexed_corpus_urls: list[str]
     themes: list[Theme]
     ideas: list[IdeaBrief]
     known_tools_considered: list[str]

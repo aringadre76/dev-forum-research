@@ -37,6 +37,15 @@ class FixtureSourceConfig(BaseModel):
 SourceConfig = GitHubSourceConfig | RSSSourceConfig | FixtureSourceConfig
 
 
+class EmbeddingConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    mode: Literal["local", "hosted"] = "local"
+    model: str = "text-embedding-3-small"
+    base_url: str = "https://api.openai.com/v1"
+    dimensions: int = Field(default=128, ge=8, le=4096)
+
+
 class ResearchConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -54,6 +63,7 @@ class AppConfig(BaseModel):
     name: str = "DevForum Research"
     storage_path: str = "data/devforum.sqlite"
     known_tools_path: str = "data/known_tools.yaml"
+    embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
     sources: list[SourceConfig]
     research: ResearchConfig = Field(default_factory=ResearchConfig)
 

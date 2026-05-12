@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 import typer
 
@@ -16,8 +16,14 @@ app = typer.Typer(help="Run the DevForum Research ingestion and research pipelin
 def run_report(
     config: Annotated[Path, typer.Option("--config", "-c")] = Path("config/example.yaml"),
     dry_run: Annotated[bool, typer.Option("--dry-run")] = False,
+    embedding_mode: Annotated[
+        Literal["local", "hosted"] | None,
+        typer.Option("--embedding-mode"),
+    ] = None,
 ) -> None:
     app_config = load_config(config)
+    if embedding_mode is not None:
+        app_config.embedding.mode = embedding_mode
     store = SQLiteStore(Path(app_config.storage_path))
     try:
         artifacts = ResearchOrchestrator(

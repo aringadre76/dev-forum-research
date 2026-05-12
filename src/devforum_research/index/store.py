@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from devforum_research.index.embeddings import HashingEmbeddingModel, cosine_similarity
+from devforum_research.index.embeddings import (
+    EmbeddingModel,
+    HashingEmbeddingModel,
+    cosine_similarity,
+)
 from devforum_research.models import Document
 from devforum_research.storage import SQLiteStore
 from devforum_research.text import tokenize
@@ -18,14 +22,16 @@ class LocalVectorIndex:
     def __init__(
         self,
         store: SQLiteStore,
-        embedding_model: HashingEmbeddingModel | None = None,
+        embedding_model: EmbeddingModel | None = None,
     ) -> None:
         self.store = store
         self.embedding_model = embedding_model or HashingEmbeddingModel()
 
-    def index_documents(self, documents: list[Document]) -> None:
-        for document in documents:
-            self.store.save_embedding(document.id, self.embedding_model.embed(document.text))
+    def index_documents(self, documents: list[Document]) -> int:
+        vectors = self.embedding_model.embed_many([document.text for document in documents])
+        for document, vector in zip(documents, vectors, strict=True):
+            self.store.save_embedding(document.id, vector)
+        return len(vectors)
 
     def search(self, query: str, documents: list[Document], limit: int = 5) -> list[SearchResult]:
         query_vector = self.embedding_model.embed(query)
