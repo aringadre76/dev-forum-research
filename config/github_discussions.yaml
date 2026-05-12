@@ -1,0 +1,22 @@
+name: DevForum Research
+storage_path: data/devforum.sqlite
+known_tools_path: data/known_tools.yaml
+embedding:
+  mode: local
+  model: text-embedding-3-small
+  base_url: https://api.openai.com/v1
+  dimensions: 128
+sources:
+  - type: github
+    repo: owner/repo
+    max_pages: 2
+    per_page: 100
+    include_discussions: true
+    max_discussion_pages: 2
+    discussion_page_size: 50
+research:
+  days: 30
+  top_k_themes: 5
+  max_themes: 12
+  evidence_per_theme: 4
+  output_dir: runs

@@ -1,15 +1,17 @@
 # DevForum Research
 
-DevForum Research is an MVP CLI for evidence-backed devtools and AI-devtools opportunity research.
-It ingests configured public sources, normalizes documents with provenance, indexes them locally,
-scores recurring pain themes, and writes dated Markdown and JSON reports.
+DevForum Research is an MVP CLI for evidence-backed devtools and AI-devtools opportunity
+research. It ingests configured public sources, normalizes documents with provenance,
+indexes them locally, scores recurring pain themes, and writes dated Markdown and JSON
+reports.
 
 The default example uses a tiny synthetic fixture dataset so the full pipeline runs without secrets.
 GitHub Issues and RSS or Atom feeds are available as source connectors.
 
 ## Compliance stance
 
-- API-first ingestion. GitHub data is read through the GitHub REST API.
+- API-first ingestion. GitHub Issues are read through the GitHub REST API, and
+  GitHub Discussions are read through the GitHub GraphQL API.
 - RSS and Atom feeds are consumed through feed URLs configured by the user.
 - No prohibited scraping is implemented.
 - If future HTTP fetching is added beyond official APIs and feeds, it should respect robots.txt and source terms.
@@ -19,7 +21,8 @@ GitHub Issues and RSS or Atom feeds are available as source connectors.
 ## Architecture
 
 - `SourceConnector` is the extension interface for ingestion.
-- `Document` is the unified schema for GitHub Issues, RSS entries, and fixtures.
+- `Document` is the unified schema for GitHub Issues, GitHub Discussions, RSS entries,
+  and fixtures.
 - `SQLiteStore` persists documents, source cursors, and local vectors.
 - `HashingEmbeddingModel` provides deterministic local embeddings for MVP use.
 - `HostedEmbeddingModel` provides optional OpenAI-compatible embeddings behind config or CLI flags.
@@ -45,7 +48,8 @@ cp .env.example .env
 
 Environment variables:
 
-- `GITHUB_TOKEN`: Optional for GitHub API ingestion, recommended for rate limits.
+- `GITHUB_TOKEN`: Optional for GitHub Issues, required for GitHub Discussions because
+  the Discussions connector uses the GitHub GraphQL API.
 - `OPENAI_API_KEY`: Enables IdeaBrief generation and hosted embedding mode.
 - `OPENAI_BASE_URL`: Optional OpenAI-compatible chat endpoint.
 - `OPENAI_MODEL`: Optional model name, defaults to `gpt-4o-mini`.
@@ -106,6 +110,10 @@ Use hosted embeddings with an OpenAI-compatible embeddings endpoint:
 OPENAI_API_KEY=your_key python3 -m devforum_research.cli run --config config/hosted_embeddings.yaml --dry-run
 ```
 
+`config/hosted_embeddings.yaml` requires `OPENAI_API_KEY` even with `--dry-run` because
+dry-run skips LLM IdeaBrief generation but still indexes documents with the configured
+embedding provider.
+
 ## Source configuration
 
 Edit `config/example.yaml` or create another YAML file:
@@ -124,6 +132,9 @@ sources:
     repo: owner/repo
     max_pages: 2
     per_page: 100
+    include_discussions: false
+    max_discussion_pages: 2
+    discussion_page_size: 50
   - type: rss
     name: example-feed
     url: https://example.com/feed.xml
@@ -138,6 +149,34 @@ research:
 ```
 
 `as_of` is optional. It is set in the example config so fixture dry-runs stay date-stable.
+
+### GitHub Discussions
+
+Set `include_discussions: true` on a GitHub source to ingest Discussions for that repo:
+
+```yaml
+sources:
+  - type: github
+    repo: owner/repo
+    include_discussions: true
+    max_pages: 2
+    per_page: 100
+    max_discussion_pages: 2
+    discussion_page_size: 50
+```
+
+A full example is available at `config/github_discussions.yaml`.
+
+GitHub Discussions ingestion uses the GitHub GraphQL API, so `GITHUB_TOKEN` is required.
+For public repositories, a classic token with `public_repo` access is sufficient in most
+setups. For private repositories, use a token with access to the repository plus read
+access to Discussions and metadata. Fine-grained token behavior can vary by organization
+policy, so if GraphQL returns permission errors, verify the repository is selected and
+Discussions read access is granted.
+
+If Discussions are disabled for a repository, unavailable through organization policy, or
+blocked by token permissions, ingestion will fail with the GitHub GraphQL error instead of
+falling back to scraping. This keeps the connector API-first and compliant.
 
 ## Embedding modes
 
@@ -194,6 +233,7 @@ themes plus evidence excerpts. When LLM mode is enabled:
 The test suite covers:
 
 - GitHub and RSS document normalization.
+- GitHub Discussions normalization and GraphQL pagination with mocked HTTP.
 - RSS HTML sanitization.
 - IdeaBrief schema validation.
 - Citation enforcement.
@@ -214,7 +254,8 @@ To add a new source:
 
 ## Limitations
 
-- GitHub Discussions are not implemented yet, though the schema allows a future `github_discussion` source type.
+- GitHub Discussions require `GITHUB_TOKEN` and may be unavailable for private repos or
+  organizations with restrictive token policies.
 - Stack Exchange tags are not implemented in this MVP.
 - The local embedding model is deterministic and cheap, but not deeply semantic.
 - Hosted embedding mode can improve retrieval quality, but adds network latency, provider costs, and data-sharing considerations.
