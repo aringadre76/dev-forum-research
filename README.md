@@ -129,6 +129,7 @@ embedding:
   dimensions: 128
 sources:
   - type: github
+    enabled: true
     repo: owner/repo
     max_pages: 2
     per_page: 100
@@ -157,6 +158,7 @@ Set `include_discussions: true` on a GitHub source to ingest Discussions for tha
 ```yaml
 sources:
   - type: github
+    enabled: true
     repo: owner/repo
     include_discussions: true
     max_pages: 2
@@ -165,7 +167,9 @@ sources:
     discussion_page_size: 50
 ```
 
-A full example is available at `config/github_discussions.yaml`.
+A template is available at `config/github_discussions.yaml`. It is disabled by default so
+local verification does not call the live GitHub API with the placeholder repo. Set
+`enabled: true`, replace `owner/repo`, and provide `GITHUB_TOKEN` before running it.
 
 GitHub Discussions ingestion uses the GitHub GraphQL API, so `GITHUB_TOKEN` is required.
 For public repositories, a classic token with `public_repo` access is sufficient in most

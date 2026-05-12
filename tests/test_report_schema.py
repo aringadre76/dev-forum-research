@@ -15,8 +15,8 @@ def test_idea_brief_schema_accepts_required_fields_and_known_citations():
         ),
         evidence=[
             Evidence(
-                source_type="github_issue",
-                url="https://github.com/acme/tool/issues/7",
+                source_type="stackexchange_question",
+                url="https://stackoverflow.com/questions/12345/agent-evals-fail-in-ci",
                 why_it_matters="The issue shows repeated failed workarounds.",
                 excerpt="still broken after splitting packages",
             )
@@ -29,9 +29,9 @@ def test_idea_brief_schema_accepts_required_fields_and_known_citations():
         validation_plan=["Interview five maintainers with flaky AI build pipelines."],
     )
 
-    validate_citations([idea], {"https://github.com/acme/tool/issues/7"})
+    validate_citations([idea], {"https://stackoverflow.com/questions/12345/agent-evals-fail-in-ci"})
 
-    assert idea.evidence[0].source_type == "github_issue"
+    assert idea.evidence[0].source_type == "stackexchange_question"
 
 
 def test_idea_brief_schema_rejects_missing_required_fields():

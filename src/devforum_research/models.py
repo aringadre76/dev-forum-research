@@ -5,7 +5,13 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
 
-SourceType = Literal["github_issue", "github_discussion", "rss", "fixture"]
+SourceType = Literal[
+    "github_issue",
+    "github_discussion",
+    "rss",
+    "fixture",
+    "stackexchange_question",
+]
 
 
 class DocumentMetadata(BaseModel):

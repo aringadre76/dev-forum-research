@@ -14,11 +14,13 @@ from devforum_research.config import (
     FixtureSourceConfig,
     GitHubSourceConfig,
     RSSSourceConfig,
+    StackExchangeSourceConfig,
 )
 from devforum_research.connectors.base import SourceConnector, SourceState
 from devforum_research.connectors.fixtures import FixtureConnector
 from devforum_research.connectors.github import GitHubConnector
 from devforum_research.connectors.rss import RSSConnector
+from devforum_research.connectors.stackexchange import StackExchangeConnector
 from devforum_research.index.embeddings import build_embedding_model
 from devforum_research.index.store import LocalVectorIndex
 from devforum_research.llm.client import LLMClient, build_llm_client
@@ -72,6 +74,8 @@ class StructuredLogger:
 def build_connectors(config: AppConfig) -> list[SourceConnector]:
     connectors: list[SourceConnector] = []
     for source in config.sources:
+        if not source.enabled:
+            continue
         if isinstance(source, GitHubSourceConfig):
             connectors.append(
                 GitHubConnector(
@@ -89,6 +93,18 @@ def build_connectors(config: AppConfig) -> list[SourceConnector]:
             )
         elif isinstance(source, FixtureSourceConfig):
             connectors.append(FixtureConnector(name=source.name, path=Path(source.path)))
+        elif isinstance(source, StackExchangeSourceConfig):
+            connectors.append(
+                StackExchangeConnector(
+                    site=source.site,
+                    tagged=source.tagged,
+                    pagesize=source.pagesize,
+                    max_pages=source.max_pages,
+                    from_date=source.from_date,
+                    to_date=source.to_date,
+                    request_interval_seconds=source.request_interval_seconds,
+                )
+            )
         else:
             raise ValueError(f"Unsupported source config: {source}")
     return connectors

@@ -114,7 +114,9 @@ class OpenAICompatibleClient:
                     "pain_hypothesis": "string",
                     "evidence": [
                         {
-                            "source_type": "github_issue|github_discussion|rss|fixture",
+                            "source_type": (
+                                "github_issue|github_discussion|rss|fixture|stackexchange_question"
+                            ),
                             "url": "string",
                             "why_it_matters": "string",
                             "excerpt": "string",

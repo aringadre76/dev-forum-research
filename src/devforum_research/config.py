@@ -12,6 +12,7 @@ class GitHubSourceConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     type: Literal["github"]
+    enabled: bool = True
     repo: str
     max_pages: int = Field(default=2, ge=1, le=10)
     per_page: int = Field(default=100, ge=1, le=100)
@@ -24,6 +25,7 @@ class RSSSourceConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     type: Literal["rss"]
+    enabled: bool = True
     name: str
     url: str
     max_entries: int = Field(default=50, ge=1, le=200)
@@ -33,11 +35,28 @@ class FixtureSourceConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     type: Literal["fixture"]
+    enabled: bool = True
     name: str
     path: str
 
 
-SourceConfig = GitHubSourceConfig | RSSSourceConfig | FixtureSourceConfig
+class StackExchangeSourceConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["stackexchange"]
+    enabled: bool = True
+    site: str = "stackoverflow"
+    tagged: list[str] = Field(default_factory=list)
+    pagesize: int = Field(default=25, ge=1, le=100)
+    max_pages: int = Field(default=2, ge=1, le=10)
+    from_date: datetime | None = None
+    to_date: datetime | None = None
+    request_interval_seconds: float = Field(default=0.5, ge=0.0, le=10.0)
+
+
+SourceConfig = (
+    GitHubSourceConfig | RSSSourceConfig | FixtureSourceConfig | StackExchangeSourceConfig
+)
 
 
 class EmbeddingConfig(BaseModel):
