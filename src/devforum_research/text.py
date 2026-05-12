@@ -12,6 +12,7 @@ STOPWORDS = {
     "after",
     "again",
     "also",
+    "are",
     "because",
     "being",
     "broken",
@@ -57,11 +58,11 @@ def top_ngrams(texts: list[str], n: int = 2, limit: int = 20) -> list[tuple[str,
     counter: Counter[str] = Counter()
     for text in texts:
         tokens = tokenize(text)
-        seen = {
-            " ".join(tokens[index : index + n]) for index in range(0, max(0, len(tokens) - n + 1))
-        }
+        seen = sorted(
+            {" ".join(tokens[index : index + n]) for index in range(0, max(0, len(tokens) - n + 1))}
+        )
         counter.update(seen)
-    return counter.most_common(limit)
+    return sorted(counter.items(), key=lambda item: (-item[1], item[0]))[:limit]
 
 
 def excerpt(text: str, max_length: int = 260) -> str:
