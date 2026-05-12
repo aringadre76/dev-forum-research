@@ -15,6 +15,9 @@ class GitHubSourceConfig(BaseModel):
     repo: str
     max_pages: int = Field(default=2, ge=1, le=10)
     per_page: int = Field(default=100, ge=1, le=100)
+    include_discussions: bool = False
+    max_discussion_pages: int = Field(default=2, ge=1, le=10)
+    discussion_page_size: int = Field(default=50, ge=1, le=100)
 
 
 class RSSSourceConfig(BaseModel):

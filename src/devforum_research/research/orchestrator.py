@@ -78,6 +78,9 @@ def build_connectors(config: AppConfig) -> list[SourceConnector]:
                     repo=source.repo,
                     max_pages=source.max_pages,
                     per_page=source.per_page,
+                    include_discussions=source.include_discussions,
+                    max_discussion_pages=source.max_discussion_pages,
+                    discussion_page_size=source.discussion_page_size,
                 )
             )
         elif isinstance(source, RSSSourceConfig):
@@ -290,6 +293,7 @@ class ResearchOrchestrator:
                 "source ingested",
                 source_id=connector.source_id,
                 document_count=len(documents),
+                **document_type_counts(documents),
             )
 
         documents = self.store.list_documents(since=since)
@@ -469,3 +473,8 @@ def render_markdown_report(report: ResearchReport) -> str:
         lines.append(f"- {limitation}")
     lines.append("")
     return "\n".join(lines)
+
+
+def document_type_counts(documents: list[Document]) -> dict[str, int]:
+    counts = Counter(document.source_type for document in documents)
+    return {f"{source_type}_count": count for source_type, count in sorted(counts.items())}

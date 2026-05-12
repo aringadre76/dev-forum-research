@@ -11,6 +11,46 @@ import httpx
 from devforum_research.connectors.base import SourceState
 from devforum_research.models import Document, DocumentMetadata
 
+GITHUB_DISCUSSIONS_QUERY = """
+query DevForumResearchDiscussions($owner: String!, $name: String!, $first: Int!, $after: String) {
+  repository(owner: $owner, name: $name) {
+    discussions(first: $first, after: $after, orderBy: {field: UPDATED_AT, direction: DESC}) {
+      edges {
+        cursor
+        node {
+          id
+          number
+          title
+          body
+          url
+          createdAt
+          updatedAt
+          answerChosenAt
+          comments {
+            totalCount
+          }
+          category {
+            name
+          }
+          author {
+            login
+          }
+          labels(first: 20) {
+            nodes {
+              name
+            }
+          }
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+"""
+
 
 def _parse_datetime(value: str | None) -> datetime | None:
     if not value:
@@ -62,6 +102,42 @@ def normalize_github_issue(repo: str, raw_issue: dict[str, Any]) -> Document:
     )
 
 
+def normalize_github_discussion(repo: str, raw_discussion: dict[str, Any]) -> Document:
+    number = str(raw_discussion["number"])
+    updated_at = _parse_datetime(raw_discussion.get("updatedAt"))
+    created_at = _parse_datetime(raw_discussion.get("createdAt"))
+    labels = [
+        str(label.get("name"))
+        for label in (raw_discussion.get("labels") or {}).get("nodes", [])
+        if isinstance(label, dict) and label.get("name")
+    ]
+    category = raw_discussion.get("category") or {}
+    category_name = category.get("name") if isinstance(category, dict) else None
+    tags = ([str(category_name)] if category_name else []) + labels
+    author = raw_discussion.get("author") or {}
+    author_login = author.get("login") if isinstance(author, dict) else None
+    comments = raw_discussion.get("comments") or {}
+    reply_count = comments.get("totalCount") if isinstance(comments, dict) else 0
+    return Document(
+        id=f"github_discussion:{repo}:{number}",
+        source_type="github_discussion",
+        source=f"github:{repo}",
+        url=raw_discussion.get("url") or f"https://github.com/{repo}/discussions/{number}",
+        title=raw_discussion.get("title") or f"Discussion {number}",
+        body=raw_discussion.get("body") or "",
+        observed_at=updated_at or created_at or datetime.now(UTC),
+        metadata=DocumentMetadata(
+            thread_id=number,
+            author=author_login,
+            reply_count=int(reply_count or 0),
+            resolution_state="resolved" if raw_discussion.get("answerChosenAt") else "unresolved",
+            tags=tags,
+            created_at=created_at,
+            updated_at=updated_at,
+        ),
+    )
+
+
 class GitHubConnector:
     def __init__(
         self,
@@ -69,14 +145,24 @@ class GitHubConnector:
         token: str | None = None,
         per_page: int = 100,
         max_pages: int = 2,
+        include_discussions: bool = False,
+        max_discussion_pages: int = 2,
+        discussion_page_size: int = 50,
         base_url: str = "https://api.github.com",
+        client_factory: Any | None = None,
     ) -> None:
         self.repo = repo
         self.source_id = f"github:{repo}"
         self.token = token or os.getenv("GITHUB_TOKEN")
         self.per_page = per_page
         self.max_pages = max_pages
+        self.include_discussions = include_discussions
+        self.max_discussion_pages = max_discussion_pages
+        self.discussion_page_size = discussion_page_size
         self.base_url = base_url.rstrip("/")
+        self.client_factory = client_factory or (
+            lambda: httpx.Client(timeout=30.0, follow_redirects=True)
+        )
 
     def fetch(
         self, since: datetime | None = None, state: SourceState | None = None
@@ -100,7 +186,7 @@ class GitHubConnector:
         documents: list[Document] = []
         next_url: str | None = f"{self.base_url}/repos/{self.repo}/issues"
         pages = 0
-        with httpx.Client(timeout=30.0, follow_redirects=True) as client:
+        with self.client_factory() as client:
             while next_url and pages < self.max_pages:
                 response = self._get_with_rate_limit_retry(
                     client=client,
@@ -114,6 +200,53 @@ class GitHubConnector:
                         documents.append(normalize_github_issue(self.repo, item))
                 next_url = self._next_link(response.headers.get("link"))
                 pages += 1
+            if self.include_discussions:
+                documents.extend(self._fetch_discussions(client, headers))
+        return documents
+
+    def _fetch_discussions(
+        self,
+        client: httpx.Client,
+        headers: dict[str, str],
+    ) -> list[Document]:
+        if not self.token:
+            raise ValueError("GITHUB_TOKEN is required when include_discussions is true")
+        owner, name = self.repo.split("/", 1)
+        after: str | None = None
+        pages = 0
+        documents: list[Document] = []
+        while pages < self.max_discussion_pages:
+            response = self._post_with_rate_limit_retry(
+                client=client,
+                url=f"{self.base_url}/graphql",
+                headers=headers,
+                json_body={
+                    "query": GITHUB_DISCUSSIONS_QUERY,
+                    "variables": {
+                        "owner": owner,
+                        "name": name,
+                        "first": self.discussion_page_size,
+                        "after": after,
+                    },
+                },
+            )
+            response.raise_for_status()
+            payload = response.json()
+            if payload.get("errors"):
+                raise RuntimeError(f"GitHub Discussions GraphQL error: {payload['errors']}")
+            discussions = (payload.get("data") or {}).get("repository", {}).get("discussions")
+            if not discussions:
+                return documents
+            edges = discussions.get("edges") or []
+            for edge in edges:
+                node = edge.get("node") if isinstance(edge, dict) else None
+                if isinstance(node, dict):
+                    documents.append(normalize_github_discussion(self.repo, node))
+            page_info = discussions.get("pageInfo") or {}
+            pages += 1
+            if not page_info.get("hasNextPage"):
+                break
+            after = page_info.get("endCursor")
         return documents
 
     def _get_with_rate_limit_retry(
@@ -125,6 +258,25 @@ class GitHubConnector:
     ) -> httpx.Response:
         for attempt in range(3):
             response = client.get(url, headers=headers, params=params)
+            if not self._is_rate_limited(response) or attempt == 2:
+                return response
+            reset = response.headers.get("x-ratelimit-reset")
+            if reset:
+                sleep_for = max(1, int(reset) - int(time.time()) + 1)
+                time.sleep(min(sleep_for, 60))
+            else:
+                time.sleep(2**attempt)
+        raise RuntimeError("GitHub rate-limit retry loop exited unexpectedly")
+
+    def _post_with_rate_limit_retry(
+        self,
+        client: httpx.Client,
+        url: str,
+        headers: dict[str, str],
+        json_body: dict[str, Any],
+    ) -> httpx.Response:
+        for attempt in range(3):
+            response = client.post(url, headers=headers, json=json_body)
             if not self._is_rate_limited(response) or attempt == 2:
                 return response
             reset = response.headers.get("x-ratelimit-reset")

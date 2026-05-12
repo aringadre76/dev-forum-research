@@ -26,6 +26,7 @@ def test_orchestrator_report_records_indexed_corpus_urls_and_stage_counts(tmp_pa
     assert "indexed_corpus_urls" in report
     assert "https://github.com/example/agent-build/issues/101" in report["indexed_corpus_urls"]
     assert any(log["stage"] == "index" and log.get("embedded_count") == 5 for log in logs)
+    assert any(log["stage"] == "ingest" and log.get("github_issue_count") == 4 for log in logs)
     assert any(
         log["stage"] == "evidence_compilation" and log.get("retrieved_count", 0) >= 1
         for log in logs
