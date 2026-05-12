@@ -1,0 +1,190 @@
+- name: GitHub Actions
+  category: ci_cd
+  url: https://github.com/features/actions
+  strengths: ["ubiquitous repository-native CI", "marketplace ecosystem", "good workflow automation"]
+  limitations: ["logs are job-centric", "limited semantic understanding of AI tool failures"]
+- name: Docker
+  category: runtime
+  url: https://www.docker.com/
+  strengths: ["portable containers", "developer-standard packaging"]
+  limitations: ["build cache behavior can be opaque", "large monorepo builds need extra orchestration"]
+- name: Terraform
+  category: infrastructure
+  url: https://www.terraform.io/
+  strengths: ["declarative infrastructure", "large provider ecosystem"]
+  limitations: ["state drift can be hard to diagnose", "module upgrades create review overhead"]
+- name: Vite
+  category: frontend_tooling
+  url: https://vite.dev/
+  strengths: ["fast local development", "modern frontend defaults"]
+  limitations: ["plugin interactions can be opaque", "large monorepo edge cases need custom fixes"]
+- name: ESLint
+  category: code_quality
+  url: https://eslint.org/
+  strengths: ["customizable static analysis", "broad JavaScript ecosystem support"]
+  limitations: ["rule tuning is labor-intensive", "does not explain cross-tool build failures"]
+- name: VS Code
+  category: ide
+  url: https://code.visualstudio.com/
+  strengths: ["large extension ecosystem", "familiar developer workflow"]
+  limitations: ["workspace state differs from CI", "extensions rarely coordinate across toolchains"]
+- name: Cursor
+  category: ai_ide
+  url: https://cursor.com/
+  strengths: ["AI-native coding workflow", "repository-aware edits"]
+  limitations: ["generated changes still need validation infrastructure", "team observability is external"]
+- name: GitHub Copilot
+  category: ai_assistant
+  url: https://github.com/features/copilot
+  strengths: ["broad IDE integration", "strong code suggestion workflow"]
+  limitations: ["limited product-discovery support", "not focused on evidence-backed market research"]
+- name: LangChain
+  category: ai_framework
+  url: https://www.langchain.com/
+  strengths: ["agent and chain abstractions", "large integration ecosystem"]
+  limitations: ["application observability requires extra tooling", "abstractions can obscure failure causes"]
+- name: LlamaIndex
+  category: ai_framework
+  url: https://www.llamaindex.ai/
+  strengths: ["retrieval abstractions", "data connector ecosystem"]
+  limitations: ["novelty and market-gap detection are outside core scope"]
+- name: OpenAI API
+  category: model_provider
+  url: https://openai.com/api/
+  strengths: ["high-quality models", "structured output support"]
+  limitations: ["provider costs need governance", "not a full research workflow by itself"]
+- name: Anthropic API
+  category: model_provider
+  url: https://www.anthropic.com/api
+  strengths: ["strong reasoning models", "large context support"]
+  limitations: ["does not store provenance or run local ingestion"]
+- name: Ollama
+  category: local_models
+  url: https://ollama.com/
+  strengths: ["local model serving", "simple developer setup"]
+  limitations: ["model quality varies", "does not provide research orchestration"]
+- name: Chroma
+  category: vector_database
+  url: https://www.trychroma.com/
+  strengths: ["developer-friendly vector storage", "local-first options"]
+  limitations: ["not a discourse ingestion product", "requires surrounding pipeline code"]
+- name: LanceDB
+  category: vector_database
+  url: https://lancedb.com/
+  strengths: ["local and cloud vector storage", "analytics-friendly data format"]
+  limitations: ["retrieval store only", "gap scoring must be built separately"]
+- name: SQLite
+  category: database
+  url: https://www.sqlite.org/
+  strengths: ["embedded local database", "simple deployment"]
+  limitations: ["not a distributed vector database", "semantic search requires custom extensions"]
+- name: PostHog
+  category: product_analytics
+  url: https://posthog.com/
+  strengths: ["product analytics", "feature flags and session replay"]
+  limitations: ["tracks owned product usage, not public discourse gaps"]
+- name: Sentry
+  category: observability
+  url: https://sentry.io/
+  strengths: ["error monitoring", "performance traces"]
+  limitations: ["focused on runtime failures", "not ideation from public evidence"]
+- name: Datadog
+  category: observability
+  url: https://www.datadoghq.com/
+  strengths: ["broad infrastructure monitoring", "logs and traces"]
+  limitations: ["cost and setup can be heavy for indie builders", "not specialized for AI-builder discourse"]
+- name: Grafana
+  category: observability
+  url: https://grafana.com/
+  strengths: ["dashboards and metrics", "open observability ecosystem"]
+  limitations: ["requires instrumentation", "does not infer product opportunities"]
+- name: Linear
+  category: issue_tracking
+  url: https://linear.app/
+  strengths: ["fast product issue workflow", "roadmap planning"]
+  limitations: ["uses internal team data", "does not ingest external developer discourse by default"]
+- name: Jira
+  category: issue_tracking
+  url: https://www.atlassian.com/software/jira
+  strengths: ["enterprise issue management", "custom workflows"]
+  limitations: ["heavyweight for early discovery", "weak public evidence ingestion"]
+- name: Notion
+  category: knowledge_base
+  url: https://www.notion.com/
+  strengths: ["flexible documentation", "manual research notes"]
+  limitations: ["manual provenance tracking", "no built-in gap scoring"]
+- name: Obsidian
+  category: knowledge_base
+  url: https://obsidian.md/
+  strengths: ["local notes", "linking ideas"]
+  limitations: ["manual ingestion", "no structured IdeaBrief validation"]
+- name: Mintlify
+  category: documentation
+  url: https://mintlify.com/
+  strengths: ["developer documentation sites", "AI search for docs"]
+  limitations: ["focused on published docs", "not community pain discovery"]
+- name: Docusaurus
+  category: documentation
+  url: https://docusaurus.io/
+  strengths: ["static docs sites", "open-source ecosystem"]
+  limitations: ["does not analyze issues or RSS discourse"]
+- name: Turborepo
+  category: monorepo_tooling
+  url: https://turbo.build/repo
+  strengths: ["monorepo task caching", "incremental builds"]
+  limitations: ["cache invalidation remains project-specific", "limited AI tool trace context"]
+- name: Nx
+  category: monorepo_tooling
+  url: https://nx.dev/
+  strengths: ["project graph tooling", "cache-aware task orchestration"]
+  limitations: ["requires workspace modeling", "AI-generated code paths can still surprise caches"]
+- name: Bazel
+  category: build_system
+  url: https://bazel.build/
+  strengths: ["hermetic builds", "large-scale caching"]
+  limitations: ["high adoption complexity", "not tailored to lightweight AI-builder teams"]
+- name: Playwright
+  category: testing
+  url: https://playwright.dev/
+  strengths: ["browser automation", "end-to-end testing"]
+  limitations: ["does not explain upstream product pain", "test artifacts need research context"]
+- name: Vitest
+  category: testing
+  url: https://vitest.dev/
+  strengths: ["fast JavaScript tests", "Vite-native workflow"]
+  limitations: ["unit testing only", "not a cross-source research pipeline"]
+- name: Pytest
+  category: testing
+  url: https://docs.pytest.org/
+  strengths: ["Python testing ecosystem", "fixture model"]
+  limitations: ["validates code behavior, not market hypotheses"]
+- name: Hugging Face
+  category: model_platform
+  url: https://huggingface.co/
+  strengths: ["model hub", "datasets and inference tools"]
+  limitations: ["requires users to assemble product discovery workflow"]
+- name: Weights & Biases
+  category: mlops
+  url: https://wandb.ai/
+  strengths: ["experiment tracking", "model evaluation workflow"]
+  limitations: ["ML experiment focus", "not public devtools pain discovery"]
+- name: LangSmith
+  category: ai_observability
+  url: https://www.langchain.com/langsmith
+  strengths: ["LLM application tracing", "evaluation tooling"]
+  limitations: ["instrumented app focus", "does not ingest public community discourse"]
+- name: Helicone
+  category: ai_observability
+  url: https://www.helicone.ai/
+  strengths: ["LLM gateway observability", "cost tracking"]
+  limitations: ["provider telemetry focus", "not market-gap analysis"]
+- name: Supabase
+  category: backend_platform
+  url: https://supabase.com/
+  strengths: ["Postgres backend", "auth and realtime primitives"]
+  limitations: ["application platform, not developer-pain research system"]
+- name: Vercel
+  category: deployment_platform
+  url: https://vercel.com/
+  strengths: ["frontend deployment", "serverless platform"]
+  limitations: ["deployment pipeline focus", "research orchestration must be built separately"]

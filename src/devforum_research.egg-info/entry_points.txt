@@ -1,0 +1,2 @@
+[console_scripts]
+devforum-research = devforum_research.cli:app

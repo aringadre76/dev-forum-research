@@ -1,0 +1,13 @@
+name: DevForum Research
+storage_path: data/devforum.sqlite
+known_tools_path: data/known_tools.yaml
+sources:
+  - type: fixture
+    name: synthetic-devtools-pain
+    path: tests/fixtures/documents.json
+research:
+  days: 60
+  top_k_themes: 5
+  max_themes: 12
+  evidence_per_theme: 4
+  output_dir: runs
