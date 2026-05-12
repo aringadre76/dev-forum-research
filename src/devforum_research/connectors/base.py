@@ -16,5 +16,7 @@ class SourceState:
 class SourceConnector(Protocol):
     source_id: str
 
-    def fetch(self, since: datetime | None = None, state: SourceState | None = None) -> list[Document]:
+    def fetch(
+        self, since: datetime | None = None, state: SourceState | None = None
+    ) -> list[Document]:
         raise NotImplementedError

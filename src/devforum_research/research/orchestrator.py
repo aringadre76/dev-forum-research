@@ -9,7 +9,12 @@ from pathlib import Path
 
 import yaml
 
-from devforum_research.config import AppConfig, FixtureSourceConfig, GitHubSourceConfig, RSSSourceConfig
+from devforum_research.config import (
+    AppConfig,
+    FixtureSourceConfig,
+    GitHubSourceConfig,
+    RSSSourceConfig,
+)
 from devforum_research.connectors.base import SourceConnector, SourceState
 from devforum_research.connectors.fixtures import FixtureConnector
 from devforum_research.connectors.github import GitHubConnector
@@ -29,7 +34,10 @@ from devforum_research.storage import SQLiteStore
 from devforum_research.text import excerpt, tokenize, top_ngrams
 
 WORKAROUND_RE = re.compile(
-    r"\b(hacky|workaround|gave up|still broken|wontfix|won't fix|blocked|stuck|fails again|manual step)\b",
+    (
+        r"\b(hacky|workaround|gave up|still broken|wontfix|won't fix|blocked|stuck|"
+        r"fails again|manual step)\b"
+    ),
     re.IGNORECASE,
 )
 
@@ -98,11 +106,15 @@ def discover_themes(
 
     phrases = [
         (phrase, count)
-        for phrase, count in top_ngrams([document.text for document in recent_documents], n=2, limit=50)
+        for phrase, count in top_ngrams(
+            [document.text for document in recent_documents], n=2, limit=50
+        )
         if count > 1
     ]
     if not phrases:
-        token_counts = Counter(token for document in recent_documents for token in tokenize(document.text))
+        token_counts = Counter(
+            token for document in recent_documents for token in tokenize(document.text)
+        )
         phrases = token_counts.most_common(max_themes)
 
     themes: list[Theme] = []
@@ -255,7 +267,10 @@ class ResearchOrchestrator:
             ideas=ideas,
             known_tools_considered=[tool.name for tool in known_tools],
             limitations=[
-                "SQLite hashed embeddings are deterministic and local, but less semantic than hosted embeddings.",
+                (
+                    "SQLite hashed embeddings are deterministic and local, "
+                    "but less semantic than hosted embeddings."
+                ),
                 "RSS entries do not expose accepted answers, so resolution state is unknown.",
                 "Gap scores are heuristics intended to prioritize review, not prove market demand.",
             ],
@@ -313,8 +328,7 @@ def render_markdown_report(report: ResearchReport) -> str:
         )
         for evidence in theme.evidence:
             lines.append(
-                f"- [{evidence.title}]({evidence.url}) "
-                f"({evidence.source_type}): {evidence.excerpt}"
+                f"- [{evidence.title}]({evidence.url}) ({evidence.source_type}): {evidence.excerpt}"
             )
         lines.append("")
 

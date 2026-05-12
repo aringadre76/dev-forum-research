@@ -78,7 +78,9 @@ class GitHubConnector:
         self.max_pages = max_pages
         self.base_url = base_url.rstrip("/")
 
-    def fetch(self, since: datetime | None = None, state: SourceState | None = None) -> list[Document]:
+    def fetch(
+        self, since: datetime | None = None, state: SourceState | None = None
+    ) -> list[Document]:
         headers = {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",

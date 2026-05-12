@@ -39,6 +39,7 @@ STOPWORDS = {
 def sanitize_html(value: str | None) -> str:
     if not value:
         return ""
+    value = re.sub(r"<(script|style)\b[^>]*>.*?</\1>", " ", value, flags=re.IGNORECASE | re.DOTALL)
     cleaned = bleach.clean(value, tags=[], attributes={}, strip=True)
     cleaned = html.unescape(cleaned)
     return re.sub(r"\s+", " ", cleaned).strip()
@@ -57,8 +58,7 @@ def top_ngrams(texts: list[str], n: int = 2, limit: int = 20) -> list[tuple[str,
     for text in texts:
         tokens = tokenize(text)
         seen = {
-            " ".join(tokens[index : index + n])
-            for index in range(0, max(0, len(tokens) - n + 1))
+            " ".join(tokens[index : index + n]) for index in range(0, max(0, len(tokens) - n + 1))
         }
         counter.update(seen)
     return counter.most_common(limit)

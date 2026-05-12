@@ -30,7 +30,9 @@ class OpenAICompatibleClient:
     ) -> None:
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         self.model = model or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-        self.base_url = (base_url or os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")).rstrip("/")
+        self.base_url = (
+            base_url or os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+        ).rstrip("/")
         if not self.api_key:
             raise ValueError("OPENAI_API_KEY is required for LLM mode")
 
@@ -53,7 +55,8 @@ class OpenAICompatibleClient:
             except (ValidationError, ValueError, json.JSONDecodeError) as exc:
                 last_error = exc
                 prompt += (
-                    "\n\nPrevious response failed validation. Return only valid JSON matching the schema. "
+                    "\n\nPrevious response failed validation. "
+                    "Return only valid JSON matching the schema. "
                     f"Validation error: {exc}"
                 )
         raise ValueError(f"LLM failed to return valid IdeaBrief JSON: {last_error}")

@@ -10,7 +10,9 @@ def test_idea_brief_schema_accepts_required_fields_and_known_citations():
         one_liner="Pinpoints flaky AI build failures with reproducible traces.",
         target_user="AI tooling teams running CI in monorepos",
         constraints=["monorepo", "cost caps"],
-        pain_hypothesis="If teams can replay failing tool calls, flaky build triage time drops by 30%.",
+        pain_hypothesis=(
+            "If teams can replay failing tool calls, flaky build triage time drops by 30%."
+        ),
         evidence=[
             Evidence(
                 source_type="github_issue",
@@ -55,7 +57,9 @@ def test_citation_validation_rejects_invented_urls():
         one_liner="Pinpoints flaky AI build failures with reproducible traces.",
         target_user="AI tooling teams running CI in monorepos",
         constraints=["monorepo"],
-        pain_hypothesis="If teams can replay failing tool calls, flaky build triage time drops by 30%.",
+        pain_hypothesis=(
+            "If teams can replay failing tool calls, flaky build triage time drops by 30%."
+        ),
         evidence=[
             Evidence(
                 source_type="github_issue",

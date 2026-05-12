@@ -14,7 +14,9 @@ class FixtureConnector:
         self.path = path
         self.source_id = f"fixture:{name}"
 
-    def fetch(self, since: datetime | None = None, state: SourceState | None = None) -> list[Document]:
+    def fetch(
+        self, since: datetime | None = None, state: SourceState | None = None
+    ) -> list[Document]:
         raw_items = json.loads(self.path.read_text())
         documents = [Document.model_validate(item) for item in raw_items]
         if since:

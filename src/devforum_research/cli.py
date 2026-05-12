@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Annotated
 
 import typer
 
@@ -13,8 +14,8 @@ app = typer.Typer(help="Run the DevForum Research ingestion and research pipelin
 
 @app.command("run")
 def run_report(
-    config: Path = typer.Option(Path("config/example.yaml"), "--config", "-c"),
-    dry_run: bool = typer.Option(False, "--dry-run"),
+    config: Annotated[Path, typer.Option("--config", "-c")] = Path("config/example.yaml"),
+    dry_run: Annotated[bool, typer.Option("--dry-run")] = False,
 ) -> None:
     app_config = load_config(config)
     store = SQLiteStore(Path(app_config.storage_path))
@@ -32,9 +33,15 @@ def run_report(
 
 
 @app.command("latest")
-def latest_report(runs_dir: Path = typer.Option(Path("runs"), "--runs-dir")) -> None:
+def latest_report(
+    runs_dir: Annotated[Path, typer.Option("--runs-dir")] = Path("runs"),
+) -> None:
     run_dirs = sorted([path for path in runs_dir.glob("*") if path.is_dir()])
     if not run_dirs:
         raise typer.BadParameter(f"No runs found under {runs_dir}")
     latest = run_dirs[-1] / "report.md"
     typer.echo(latest.read_text())
+
+
+if __name__ == "__main__":
+    app()

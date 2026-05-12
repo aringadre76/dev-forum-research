@@ -86,7 +86,10 @@ class SQLiteStore:
     def list_documents(self, since: datetime | None = None) -> list[Document]:
         if since:
             rows = self.connection.execute(
-                "SELECT document_json FROM documents WHERE observed_at >= ? ORDER BY observed_at DESC",
+                (
+                    "SELECT document_json FROM documents "
+                    "WHERE observed_at >= ? ORDER BY observed_at DESC"
+                ),
                 (since.isoformat(),),
             ).fetchall()
         else:

@@ -23,7 +23,9 @@ def _parse_datetime(value: str | None) -> datetime:
 def normalize_rss_entry(feed_name: str, raw_entry: dict[str, Any]) -> Document:
     entry_id = str(raw_entry.get("id") or raw_entry.get("guid") or raw_entry.get("link"))
     link = str(raw_entry.get("link") or entry_id)
-    summary = raw_entry.get("summary") or raw_entry.get("description") or raw_entry.get("content", "")
+    summary = (
+        raw_entry.get("summary") or raw_entry.get("description") or raw_entry.get("content", "")
+    )
     if isinstance(summary, list) and summary:
         summary = summary[0].get("value", "")
     tags = [
@@ -60,11 +62,12 @@ class RSSConnector:
         self.max_entries = max_entries
         self.source_id = f"rss:{name}"
 
-    def fetch(self, since: datetime | None = None, state: SourceState | None = None) -> list[Document]:
+    def fetch(
+        self, since: datetime | None = None, state: SourceState | None = None
+    ) -> list[Document]:
         feed = feedparser.parse(self.url)
         documents = [
-            normalize_rss_entry(self.name, entry)
-            for entry in feed.entries[: self.max_entries]
+            normalize_rss_entry(self.name, entry) for entry in feed.entries[: self.max_entries]
         ]
         if since:
             return [document for document in documents if document.observed_at >= since]
