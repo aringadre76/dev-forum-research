@@ -1,0 +1,41 @@
+[project]
+name = "devforum-research"
+version = "0.1.0"
+description = "AI-assisted research pipeline for developer and AI-builder discourse"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "bleach>=6.2.0",
+  "feedparser>=6.0.11",
+  "httpx>=0.28.1",
+  "pydantic>=2.12.4",
+  "PyYAML>=6.0.3",
+  "typer>=0.20.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=9.0.1",
+  "ruff>=0.14.6",
+]
+
+[project.scripts]
+devforum-research = "devforum_research.cli:app"
+
+[build-system]
+requires = ["setuptools>=80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
