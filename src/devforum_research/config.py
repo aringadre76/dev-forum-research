@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
@@ -40,6 +41,7 @@ class ResearchConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     days: int = Field(default=30, ge=1, le=3650)
+    as_of: datetime | None = None
     top_k_themes: int = Field(default=5, ge=1, le=20)
     max_themes: int = Field(default=12, ge=1, le=50)
     evidence_per_theme: int = Field(default=4, ge=1, le=10)

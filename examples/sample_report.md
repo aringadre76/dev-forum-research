@@ -1,6 +1,6 @@
-# DevForum Research Report 20260512T224911Z
+# DevForum Research Report 20260512T224911000000Z
 
-Generated at: 2026-05-12T22:49:11.773845+00:00
+Generated at: 2026-05-12T22:49:11+00:00
 Dry run: true
 Documents indexed: 5
 

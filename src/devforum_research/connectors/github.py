@@ -102,12 +102,12 @@ class GitHubConnector:
         pages = 0
         with httpx.Client(timeout=30.0, follow_redirects=True) as client:
             while next_url and pages < self.max_pages:
-                response = client.get(
-                    next_url,
+                response = self._get_with_rate_limit_retry(
+                    client=client,
+                    url=next_url,
                     headers=headers,
                     params=params if pages == 0 else None,
                 )
-                self._handle_rate_limit(response)
                 response.raise_for_status()
                 for item in response.json():
                     if "pull_request" not in item:
@@ -116,14 +116,30 @@ class GitHubConnector:
                 pages += 1
         return documents
 
-    def _handle_rate_limit(self, response: httpx.Response) -> None:
-        if response.status_code not in {403, 429}:
-            return
-        remaining = response.headers.get("x-ratelimit-remaining")
-        reset = response.headers.get("x-ratelimit-reset")
-        if remaining == "0" and reset:
-            sleep_for = max(1, int(reset) - int(time.time()) + 1)
-            time.sleep(min(sleep_for, 60))
+    def _get_with_rate_limit_retry(
+        self,
+        client: httpx.Client,
+        url: str,
+        headers: dict[str, str],
+        params: dict[str, str | int] | None,
+    ) -> httpx.Response:
+        for attempt in range(3):
+            response = client.get(url, headers=headers, params=params)
+            if not self._is_rate_limited(response) or attempt == 2:
+                return response
+            reset = response.headers.get("x-ratelimit-reset")
+            if reset:
+                sleep_for = max(1, int(reset) - int(time.time()) + 1)
+                time.sleep(min(sleep_for, 60))
+            else:
+                time.sleep(2**attempt)
+        raise RuntimeError("GitHub rate-limit retry loop exited unexpectedly")
+
+    def _is_rate_limited(self, response: httpx.Response) -> bool:
+        return (
+            response.status_code in {403, 429}
+            and response.headers.get("x-ratelimit-remaining") == "0"
+        )
 
     def _next_link(self, link_header: str | None) -> str | None:
         if not link_header:

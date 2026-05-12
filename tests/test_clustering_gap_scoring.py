@@ -68,3 +68,34 @@ def test_discovers_theme_with_gap_score_from_replies_repetition_and_workarounds(
     assert themes[0].signals.repeated_phrase_hits >= 2
     assert themes[0].signals.workaround_language_hits == 2
     assert [e.document_id for e in themes[0].evidence] == ["1", "2"]
+
+
+def test_discovers_theme_honors_evidence_limit_and_stable_now():
+    documents = [
+        _doc(
+            "1",
+            "Token caps are still broken",
+            "The workaround is hacky and token caps fail on branch evals.",
+            10,
+            "unresolved",
+        ),
+        _doc(
+            "2",
+            "Token caps need alerts",
+            "Token caps are still broken and the team is blocked.",
+            8,
+            "unresolved",
+        ),
+    ]
+
+    themes = discover_themes(
+        documents,
+        since=datetime(2026, 5, 1, tzinfo=UTC),
+        top_k=1,
+        max_themes=4,
+        evidence_limit=1,
+        now=datetime(2026, 5, 12, tzinfo=UTC),
+    )
+
+    assert themes[0].label == "token caps"
+    assert len(themes[0].evidence) == 1

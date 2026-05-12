@@ -55,6 +55,7 @@ class StructuredLogger:
     def __init__(self, path: Path) -> None:
         self.path = path
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.path.write_text("", encoding="utf-8")
 
     def log(self, stage: str, message: str, **fields: object) -> None:
         payload = {
@@ -99,7 +100,10 @@ def discover_themes(
     since: datetime,
     top_k: int = 5,
     max_themes: int = 12,
+    evidence_limit: int = 5,
+    now: datetime | None = None,
 ) -> list[Theme]:
+    now = now or datetime.now(UTC)
     recent_documents = [document for document in documents if document.observed_at >= since]
     if not recent_documents:
         return []
@@ -128,16 +132,36 @@ def discover_themes(
         if not matching or phrase in used_labels:
             continue
         used_labels.add(phrase)
-        theme = _theme_from_documents(phrase, phrase_count, matching)
+        theme = _theme_from_documents(
+            phrase,
+            phrase_count,
+            matching,
+            evidence_limit=evidence_limit,
+            now=now,
+        )
         themes.append(theme)
 
     if not themes:
-        themes.append(_theme_from_documents("general developer pain", 1, recent_documents))
+        themes.append(
+            _theme_from_documents(
+                "general developer pain",
+                1,
+                recent_documents,
+                evidence_limit=evidence_limit,
+                now=now,
+            )
+        )
 
     return sorted(themes, key=lambda theme: theme.gap_score, reverse=True)[:top_k]
 
 
-def _theme_from_documents(label: str, phrase_count: int, documents: list[Document]) -> Theme:
+def _theme_from_documents(
+    label: str,
+    phrase_count: int,
+    documents: list[Document],
+    evidence_limit: int,
+    now: datetime,
+) -> Theme:
     high_reply_unresolved = sum(
         1
         for document in documents
@@ -145,9 +169,7 @@ def _theme_from_documents(label: str, phrase_count: int, documents: list[Documen
     )
     workaround_hits = sum(1 for document in documents if WORKAROUND_RE.search(document.text))
     freshness_hits = sum(
-        1
-        for document in documents
-        if document.observed_at >= datetime.now(UTC) - timedelta(days=14)
+        1 for document in documents if document.observed_at >= now - timedelta(days=14)
     )
     signals = ThemeSignals(
         high_reply_unresolved_threads=high_reply_unresolved,
@@ -180,7 +202,7 @@ def _theme_from_documents(label: str, phrase_count: int, documents: list[Documen
             excerpt=excerpt(document.body or document.title),
             score=float(document.metadata.reply_count),
         )
-        for document in ranked[:5]
+        for document in ranked[:evidence_limit]
     ]
     return Theme(
         label=label,
@@ -190,6 +212,41 @@ def _theme_from_documents(label: str, phrase_count: int, documents: list[Documen
         document_ids=[document.id for document in ranked],
         evidence=evidence,
     )
+
+
+def compile_theme_evidence(
+    themes: list[Theme],
+    documents: list[Document],
+    index: LocalVectorIndex,
+    evidence_per_theme: int,
+) -> list[Theme]:
+    compiled: list[Theme] = []
+    for theme in themes:
+        query = " ".join([theme.label, *theme.keywords])
+        candidate_documents = [
+            document for document in documents if document.id in set(theme.document_ids)
+        ] or documents
+        results = index.search(query, candidate_documents, limit=evidence_per_theme)
+        evidence = [
+            ThemeEvidence(
+                document_id=result.document.id,
+                source_type=result.document.source_type,
+                url=result.document.url,
+                title=result.document.title,
+                excerpt=excerpt(result.document.body or result.document.title),
+                score=round(result.score, 4),
+            )
+            for result in results
+        ]
+        compiled.append(
+            theme.model_copy(
+                update={
+                    "evidence": evidence,
+                    "document_ids": [item.document.id for item in results],
+                }
+            )
+        )
+    return compiled
 
 
 class ResearchOrchestrator:
@@ -207,11 +264,16 @@ class ResearchOrchestrator:
         self.llm_client = llm_client if llm_client is not None else build_llm_client()
 
     def run(self, dry_run: bool = False) -> RunArtifacts:
-        run_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+        now = self.config.research.as_of or datetime.now(UTC)
+        if now.tzinfo is None:
+            now = now.replace(tzinfo=UTC)
+        else:
+            now = now.astimezone(UTC)
+        run_id = now.strftime("%Y%m%dT%H%M%S%fZ")
         run_dir = Path(self.config.research.output_dir) / run_id
         run_dir.mkdir(parents=True, exist_ok=True)
         logger = StructuredLogger(run_dir / "logs.jsonl")
-        since = datetime.now(UTC) - timedelta(days=self.config.research.days)
+        since = now - timedelta(days=self.config.research.days)
 
         logger.log("ingest", "starting ingestion", source_count=len(self.config.sources))
         connectors = build_connectors(self.config)
@@ -239,8 +301,17 @@ class ResearchOrchestrator:
             since=since,
             top_k=self.config.research.top_k_themes,
             max_themes=self.config.research.max_themes,
+            evidence_limit=self.config.research.evidence_per_theme,
+            now=now,
         )
         logger.log("gap_detection", "scored themes", theme_count=len(themes))
+        logger.log("evidence_compilation", "retrieving supporting evidence")
+        themes = compile_theme_evidence(
+            themes=themes,
+            documents=documents,
+            index=self.index,
+            evidence_per_theme=self.config.research.evidence_per_theme,
+        )
 
         known_tools = load_known_tools(Path(self.config.known_tools_path))
         allowed_urls = {document.url for document in documents}
@@ -259,7 +330,7 @@ class ResearchOrchestrator:
 
         report = ResearchReport(
             run_id=run_id,
-            generated_at=datetime.now(UTC),
+            generated_at=now,
             dry_run=is_dry_run,
             config_path=str(self.config_path),
             document_count=len(documents),

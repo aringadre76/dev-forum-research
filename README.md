@@ -112,11 +112,14 @@ sources:
     max_entries: 50
 research:
   days: 30
+  as_of: "2026-05-12T22:49:11+00:00"
   top_k_themes: 5
   max_themes: 12
   evidence_per_theme: 4
   output_dir: runs
 ```
+
+`as_of` is optional. It is set in the example config so fixture dry-runs stay date-stable.
 
 ## Outputs
 
