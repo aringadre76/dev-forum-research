@@ -12,6 +12,7 @@ GitHub Issues and RSS or Atom feeds are available as source connectors.
 
 - API-first ingestion. GitHub Issues are read through the GitHub REST API, and
   GitHub Discussions are read through the GitHub GraphQL API.
+- Stack Exchange questions are read through the public Stack Exchange API.
 - RSS and Atom feeds are consumed through feed URLs configured by the user.
 - No prohibited scraping is implemented.
 - If future HTTP fetching is added beyond official APIs and feeds, it should respect robots.txt and source terms.
@@ -21,8 +22,8 @@ GitHub Issues and RSS or Atom feeds are available as source connectors.
 ## Architecture
 
 - `SourceConnector` is the extension interface for ingestion.
-- `Document` is the unified schema for GitHub Issues, GitHub Discussions, RSS entries,
-  and fixtures.
+- `Document` is the unified schema for GitHub Issues, GitHub Discussions, Stack Exchange
+  questions, RSS entries, and fixtures.
 - `SQLiteStore` persists documents, source cursors, and local vectors.
 - `HashingEmbeddingModel` provides deterministic local embeddings for MVP use.
 - `HostedEmbeddingModel` provides optional OpenAI-compatible embeddings behind config or CLI flags.
@@ -137,9 +138,20 @@ sources:
     max_discussion_pages: 2
     discussion_page_size: 50
   - type: rss
+    enabled: true
     name: example-feed
     url: https://example.com/feed.xml
     max_entries: 50
+  - type: stackexchange
+    enabled: false
+    site: stackoverflow
+    tagged:
+      - python
+      - github-actions
+      - ai
+    pagesize: 25
+    max_pages: 2
+    request_interval_seconds: 0.5
 research:
   days: 30
   as_of: "2026-05-12T22:49:11+00:00"
@@ -181,6 +193,39 @@ Discussions read access is granted.
 If Discussions are disabled for a repository, unavailable through organization policy, or
 blocked by token permissions, ingestion will fail with the GitHub GraphQL error instead of
 falling back to scraping. This keeps the connector API-first and compliant.
+
+### Stack Exchange
+
+Set `type: stackexchange` to ingest questions through the public Stack Exchange API:
+
+```yaml
+sources:
+  - type: stackexchange
+    enabled: true
+    site: stackoverflow
+    tagged:
+      - python
+      - github-actions
+      - ai
+    pagesize: 25
+    max_pages: 2
+    request_interval_seconds: 0.5
+```
+
+A template is available at `config/stackexchange.yaml`. It is disabled by default so local
+verification does not call the live Stack Exchange API. Set `enabled: true` before running
+it against live data.
+
+The connector maps questions into `stackexchange_question` documents and stores score,
+answer count, tags, `is_answered`, and `accepted_answer_id` in document metadata when the
+API returns those fields. It requests the `withbody` filter so Markdown question bodies can
+support evidence excerpts.
+
+Stack Exchange responses can include a `backoff` value. The connector sleeps for that value
+before continuing and also applies a conservative `request_interval_seconds` delay between
+pages. The public API has quotas and attribution requirements, so reports that quote or
+redistribute Stack Exchange content should preserve links back to the original questions
+and follow Stack Exchange network attribution guidance.
 
 ## Embedding modes
 
@@ -238,6 +283,8 @@ The test suite covers:
 
 - GitHub and RSS document normalization.
 - GitHub Discussions normalization and GraphQL pagination with mocked HTTP.
+- Stack Exchange question normalization, pagination, backoff handling, and config
+  registration with mocked HTTP.
 - RSS HTML sanitization.
 - IdeaBrief schema validation.
 - Citation enforcement.
@@ -260,7 +307,8 @@ To add a new source:
 
 - GitHub Discussions require `GITHUB_TOKEN` and may be unavailable for private repos or
   organizations with restrictive token policies.
-- Stack Exchange tags are not implemented in this MVP.
+- Stack Exchange ingestion is question-only and does not ingest answers or comments yet.
+- Stack Exchange API quota and attribution requirements apply when using live data.
 - The local embedding model is deterministic and cheap, but not deeply semantic.
 - Hosted embedding mode can improve retrieval quality, but adds network latency, provider costs, and data-sharing considerations.
 - RSS sources often lack thread metadata, reply counts, or resolution state.
